@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM 실습 가이드 — HR 실무자를 위한 AI 문서 분석</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+:root {
+  --primary: #4285F4;
+  --primary-light: #E8F0FE;
+  --primary-dark: #1A73E8;
+  --green: #0F9D58;
+  --green-light: #E6F4EA;
+  --yellow: #F9AB00;
+  --yellow-light: #FEF7E0;
+  --red: #EA4335;
+  --red-light: #FCE8E6;
+  --purple: #7B1FA2;
+  --purple-light: #F3E8FD;
+  --dark: #1A1D23;
+  --dark2: #2D3139;
+  --gray-50: #F8F9FA;
+  --gray-100: #F1F3F4;
+  --gray-200: #E8EAED;
+  --gray-300: #DADCE0;
+  --gray-500: #80868B;
+  --gray-700: #5F6368;
+  --gray-900: #202124;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Pretendard Variable', -apple-system, system-ui, sans-serif;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--primary); color: #fff; }
+
+/* ===== HEADER ===== */
+.header {
+  background: linear-gradient(135deg, var(--dark) 0%, #1a237e 50%, #311b92 100%);
+  padding: 2.8rem 2rem 2.2rem;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -40px;
+  width: 240px; height: 240px;
+  background: var(--primary);
+  opacity: 0.1;
+  border-radius: 50%;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: 25%;
+  width: 320px; height: 320px;
+  background: var(--green);
+  opacity: 0.06;
+  border-radius: 50%;
+}
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 500;
+  margin-bottom: 1.1rem;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+}
+.header-badge svg { opacity: 0.9; }
+.header h1 {
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.025em;
+}
+.header p {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.6);
+  font-weight: 400;
+}
+.header-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 1.2rem;
+}
+.header-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+}
+
+/* ===== NAV ===== */
+.nav-wrap {
+  background: #fff;
+  border-bottom: 1px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.nav {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav-btn {
+  flex-shrink: 0;
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-500);
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.nav-btn:hover { color: var(--gray-700); }
+.nav-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ===== MAIN ===== */
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 5rem;
+}
+.section { display: none; }
+.section.active { display: block; }
+
+/* ===== SESSION HEADER ===== */
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+.session-num {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+}
+.session-header h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.session-desc {
+  font-size: 0.88rem;
+  color: var(--gray-500);
+  margin-bottom: 1.75rem;
+  padding-left: 50px;
+  line-height: 1.7;
+}
+
+/* ===== INFO BOX ===== */
+.info-box {
+  border-left: 3px solid;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.84rem;
+  line-height: 1.75;
+}
+.info-box strong { font-weight: 700; }
+.info-blue { background: var(--primary-light); border-color: var(--primary); color: #174ea6; }
+.info-green { background: var(--green-light); border-color: var(--green); color: #137333; }
+.info-yellow { background: var(--yellow-light); border-color: var(--yellow); color: #8a6d00; }
+.info-red { background: var(--red-light); border-color: var(--red); color: #b3261e; }
+.info-purple { background: var(--purple-light); border-color: var(--purple); color: #6a1b9a; }
+
+/* ===== TIMETABLE ===== */
+.timetable {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.75rem;
+  box-shadow: var(--shadow);
+}
+.timetable table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+.timetable th {
+  background: var(--dark);
+  color: #fff;
+  padding: 11px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+.timetable td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-700);
+}
+.timetable tr:last-child td { border-bottom: none; }
+.timetable tr:nth-child(even) td { background: var(--gray-50); }
+.time-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== PROMPT CARD ===== */
+.prompt-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  box-shadow: var(--shadow);
+}
+.prompt-card:hover { border-color: var(--gray-300); }
+.prompt-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1rem 1.25rem;
+}
+.prompt-step {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.step-blue { background: var(--primary-light); color: #174ea6; }
+.step-green { background: var(--green-light); color: #137333; }
+.step-purple { background: var(--purple-light); color: #6a1b9a; }
+.step-yellow { background: var(--yellow-light); color: #8a6d00; }
+.step-red { background: var(--red-light); color: #b3261e; }
+.prompt-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  flex: 1;
+}
+.copy-btn {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  color: var(--gray-500);
+}
+.copy-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.copy-btn.copied {
+  background: var(--green-light);
+  border-color: var(--green);
+  color: var(--green);
+}
+.copy-btn svg { width: 16px; height: 16px; }
+.prompt-body { padding: 0 1.25rem 1.25rem; }
+.prompt-text {
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--gray-700);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.15rem;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  font-family: var(--font);
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.prompt-text:hover { border-color: var(--gray-300); }
+.prompt-text::after {
+  content: '클릭하여 복사';
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 11px;
+  color: var(--gray-300);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.prompt-text:hover::after { opacity: 1; }
+
+/* Description inside prompt card */
+.prompt-desc {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  padding: 0 1.25rem 0.6rem;
+  line-height: 1.6;
+}
+
+/* ===== EXPECTED RESULT ===== */
+.expected {
+  background: var(--green-light);
+  border-left: 3px solid var(--green);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.9rem 1.15rem;
+  margin: 0 1.25rem 1.25rem;
+  font-size: 0.82rem;
+  color: #137333;
+  line-height: 1.7;
+}
+.expected strong { font-weight: 700; }
+.expected-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ===== SPEAKER NOTE ===== */
+.speaker-note {
+  background: var(--purple-light);
+  border-left: 3px solid var(--purple);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.9rem 1.15rem;
+  margin: 0 1.25rem 1.25rem;
+  font-size: 0.82rem;
+  color: #6a1b9a;
+  line-height: 1.7;
+}
+.speaker-note-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ===== VARIATION TOGGLE ===== */
+.var-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 1.25rem;
+  border-top: 1px solid var(--gray-100);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gray-500);
+  background: var(--gray-50);
+  transition: background 0.15s;
+  user-select: none;
+}
+.var-toggle:hover { background: var(--gray-100); }
+.var-toggle svg {
+  width: 14px; height: 14px;
+  transition: transform 0.25s ease;
+}
+.var-toggle.open svg { transform: rotate(90deg); }
+.var-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+.var-list.open { max-height: 2000px; }
+.var-item {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--gray-100);
+  background: #FAFBFF;
+}
+.var-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.var-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  padding: 2px 9px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.var-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+.var-prompt {
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--gray-500);
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.var-prompt:hover { border-color: var(--gray-300); }
+
+/* ===== DOWNLOAD SECTION ===== */
+.dl-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+.dl-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+.dl-card > p {
+  font-size: 0.84rem;
+  color: var(--gray-500);
+  margin-bottom: 1.25rem;
+}
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 700px) { .dl-grid { grid-template-columns: 1fr; } }
+.dl-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  cursor: default;
+  transition: all 0.2s;
+}
+.dl-icon {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.dl-icon.word { background: #E3F2FD; color: #1565C0; }
+.dl-icon.csv { background: #E8F5E9; color: #2E7D32; }
+.dl-icon.guide { background: var(--purple-light); color: var(--purple); }
+.dl-item-info h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+.dl-item-info span { font-size: 0.72rem; color: var(--gray-500); line-height: 1.5; }
+
+/* ===== SECTION DIVIDER ===== */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2rem 0 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gray-200);
+}
+
+/* ===== CONCEPT CARDS ===== */
+.concept-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 1.75rem;
+}
+@media (max-width: 700px) { .concept-grid { grid-template-columns: 1fr; } }
+.concept-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.concept-card .icon { font-size: 2rem; margin-bottom: 0.6rem; }
+.concept-card h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; }
+.concept-card p { font-size: 0.78rem; color: var(--gray-500); line-height: 1.6; }
+.concept-card .type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+/* ===== FLOW STEPS ===== */
+.flow-steps {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.flow-step {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: 1rem 0.5rem;
+  position: relative;
+}
+.flow-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-300);
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+.flow-step .num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.flow-step .label { font-size: 0.78rem; font-weight: 600; color: var(--gray-700); }
+.flow-step .sub { font-size: 0.7rem; color: var(--gray-500); margin-top: 2px; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--dark);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===== FONT CTRL ===== */
+.font-ctrl {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 6px;
+  z-index: 100;
+}
+.font-ctrl button {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s;
+  font-family: var(--font);
+  color: var(--gray-700);
+}
+.font-ctrl button:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 640px) {
+  .header { padding: 2rem 1.25rem 1.6rem; }
+  .main { padding: 1.25rem 1rem 4rem; }
+  .flow-steps { flex-direction: column; }
+  .flow-step:not(:last-child)::after { content: '↓'; right: auto; left: 50%; top: auto; bottom: -8px; transform: translateX(-50%); }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      NotebookLM × HR 실습 가이드
+    </div>
+    <h1>NotebookLM으로 HR 문서 분석하기</h1>
+    <p>인사규정 · 만족도 조사 · 퇴사자 데이터를 AI로 교차 분석하는 실습</p>
+    <div class="header-chips">
+      <span class="header-chip">⏱️ 소요시간 30~40분</span>
+      <span class="header-chip">📄 샘플 파일 3종</span>
+      <span class="header-chip">💬 프롬프트 12개</span>
+      <span class="header-chip">🎧 오디오 기능 체험</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NAV ===== -->
+<div class="nav-wrap">
+  <div class="nav" id="nav">
+    <button class="nav-btn active" data-tab="overview">시작하기</button>
+    <button class="nav-btn" data-tab="s1">STEP 1 · 세팅</button>
+    <button class="nav-btn" data-tab="s2">STEP 2 · 단일문서</button>
+    <button class="nav-btn" data-tab="s3">STEP 3 · 교차분석 ⭐</button>
+    <button class="nav-btn" data-tab="s4">STEP 4 · 오디오</button>
+    <button class="nav-btn" data-tab="s5">STEP 5 · 실무적용</button>
+    <button class="nav-btn" data-tab="download">다운로드</button>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="section active" id="sec-overview">
+
+  <div class="info-box info-blue">
+    <strong>🎯 실습 목표</strong> — 가상 기업 "(주)테크노바 코리아"의 인사 자료 3종을 NotebookLM에 업로드하고, HR 실무에서 실제로 부딪히는 질문을 던져봅니다. <strong>여러 문서를 교차 분석하는 것</strong>이 NotebookLM의 핵심 강점입니다.
+  </div>
+
+  <div class="section-divider">시연 콘셉트</div>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="icon">📋</div>
+      <h4>인사규정</h4>
+      <p>9장 17조 전문<br>채용~AI윤리까지</p>
+      <span class="type-badge" style="background:var(--primary-light);color:var(--primary-dark)">제도 · 룰</span>
+    </div>
+    <div class="concept-card">
+      <div class="icon">📊</div>
+      <h4>직원 만족도 보고서</h4>
+      <p>영역별·부서별 점수<br>eNPS · 이직의향</p>
+      <span class="type-badge" style="background:var(--green-light);color:#137333">직원 목소리</span>
+    </div>
+    <div class="concept-card">
+      <div class="icon">📈</div>
+      <h4>퇴사자 현황 데이터</h4>
+      <p>2025년 퇴사자 20명<br>부서·사유·성과등급</p>
+      <span class="type-badge" style="background:var(--yellow-light);color:#8a6d00">팩트 데이터</span>
+    </div>
+  </div>
+
+  <div class="info-box info-green">
+    <strong>💡 왜 이 3개인가?</strong><br>
+    서로 다른 유형의 문서(정책 문서 + 정성/정량 보고서 + 구조화 데이터)를 교차 분석하는 것이 NotebookLM의 진짜 힘입니다. 한 문서만으로는 보이지 않던 인사이트가 여러 문서를 연결하면 드러납니다.
+  </div>
+
+  <div class="section-divider">타임테이블</div>
+
+  <div class="timetable">
+    <table>
+      <thead><tr><th>시간</th><th>단계</th><th>내용</th><th>핵심 메시지</th></tr></thead>
+      <tbody>
+        <tr><td><span class="time-badge">5분</span></td><td>STEP 1</td><td>NotebookLM 세팅 + 소스 업로드</td><td>"올리기만 하면 됩니다"</td></tr>
+        <tr><td><span class="time-badge">10분</span></td><td>STEP 2</td><td>단일 문서 질의 (규정 조회)</td><td>"규정집 대신 AI에게 물어보세요"</td></tr>
+        <tr><td><span class="time-badge">15분</span></td><td>STEP 3 ⭐</td><td>교차 분석 3건 (핵심)</td><td>"여러 문서 연결이 진짜 힘"</td></tr>
+        <tr><td><span class="time-badge">5분</span></td><td>STEP 4</td><td>오디오 개요 기능</td><td>"들으면서 파악하세요"</td></tr>
+        <tr><td><span class="time-badge">5분</span></td><td>STEP 5</td><td>실무 적용 토론</td><td>"여러분 회사에선 이렇게"</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-box info-yellow">
+    <strong>⚠️ 실습 전 확인사항</strong><br><br>
+    1. <strong>Google 계정</strong>이 있는지 확인하세요 (NotebookLM은 Google 서비스입니다)<br>
+    2. 위의 <strong>다운로드</strong> 탭에서 샘플 파일 3종을 미리 받아두세요<br>
+    3. 안정적인 <strong>인터넷 연결</strong>이 필요합니다<br>
+    4. <strong>실제 회사 데이터는 절대 사용하지 마세요</strong> — 가상 데이터로만 실습합니다
+  </div>
+
+</div>
+
+<!-- ==================== STEP 1: 세팅 ==================== -->
+<div class="section" id="sec-s1">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--primary);">1</div>
+    <h2>NotebookLM 세팅</h2>
+  </div>
+  <p class="session-desc">NotebookLM에 접속하고, 새 노트북을 만들어 샘플 파일 3종을 업로드합니다. 이것만으로 AI가 문서를 분석할 준비가 끝납니다.</p>
+
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="num">1</div>
+      <div class="label">접속</div>
+      <div class="sub">Google 로그인</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">2</div>
+      <div class="label">노트북 생성</div>
+      <div class="sub">제목 입력</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">3</div>
+      <div class="label">소스 업로드</div>
+      <div class="sub">파일 3종</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">4</div>
+      <div class="label">분석 대기</div>
+      <div class="sub">1~2분</div>
+    </div>
+  </div>
+
+  <!-- Step 1-1 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-blue">1-1</span>
+      <span class="prompt-card-title">NotebookLM 접속</span>
+    </div>
+    <p class="prompt-desc">아래 주소로 접속하여 Google 계정으로 로그인합니다.</p>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">https://notebooklm.google.com</div>
+    </div>
+  </div>
+
+  <!-- Step 1-2 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-blue">1-2</span>
+      <span class="prompt-card-title">새 노트북 생성</span>
+    </div>
+    <p class="prompt-desc"><strong>"새 노트북"</strong>을 클릭하고 아래 제목을 입력합니다.</p>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">테크노바 코리아 HR 분석</div>
+    </div>
+  </div>
+
+  <!-- Step 1-3 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-blue">1-3</span>
+      <span class="prompt-card-title">소스(Source) 업로드</span>
+    </div>
+    <p class="prompt-desc">좌측 패널의 <strong>"소스 추가"</strong> → <strong>"파일 업로드"</strong>를 클릭하여 아래 3개 파일을 업로드합니다.</p>
+    <div class="prompt-body" style="padding-bottom:0.5rem">
+      <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:1rem">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:8px;font-size:0.84rem">
+          <span style="font-size:1.1rem">📋</span>
+          <span style="font-weight:600">01_인사규정_테크노바코리아.docx</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:var(--gray-500)">Word</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:8px;font-size:0.84rem">
+          <span style="font-size:1.1rem">📊</span>
+          <span style="font-weight:600">02_직원만족도조사_2025하반기.docx</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:var(--gray-500)">Word</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:8px;font-size:0.84rem">
+          <span style="font-size:1.1rem">📈</span>
+          <span style="font-weight:600">03_퇴사자현황_2025.csv</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:var(--gray-500)">CSV</span>
+        </div>
+      </div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      업로드 후 1~2분 대기하면 각 소스 옆에 요약이 자동 생성됩니다. 소스를 클릭하면 AI가 해당 문서의 핵심 내용을 요약해둔 것을 확인할 수 있습니다.
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "이렇게 올리기만 하면 AI가 자동으로 문서를 이해합니다. 별도의 프롬프트 없이도 문서 구조와 내용을 파악해요."
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== STEP 2: 단일 문서 질의 ==================== -->
+<div class="section" id="sec-s2">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--green);">2</div>
+    <h2>단일 문서 질의 — 규정 조회</h2>
+  </div>
+  <p class="session-desc">"규정집 뒤질 필요 없이 물어보면 됩니다" — 인사규정 문서에서 실무 질문에 대한 답을 찾아봅니다.</p>
+
+  <!-- Prompt 1 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-green">PROMPT 1</span>
+      <span class="prompt-card-title">연차휴가 제도 조회</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">우리 회사 연차휴가는 며칠인가요? 근속연수별로 정리해주세요.</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      인사규정 제8조에서 기본 15일 + 3년 이상 근속 시 2년마다 1일 가산(최대 25일) 규정을 정리해줍니다. <strong>출처 표시</strong>가 되어 원문 확인이 가능합니다.
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "신입사원이 물어볼 때, HR담당자 대신 AI가 정확하게 답해줍니다. 출처도 표시되니까 원문 확인도 바로 되죠."
+    </div>
+  </div>
+
+  <!-- Prompt 2 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-green">PROMPT 2</span>
+      <span class="prompt-card-title">엣지케이스 — 수습기간 조건부 질의</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">수습기간 중인 직원이 성과가 안 좋을 때 회사가 취할 수 있는 조치는? 수습 연장은 가능한가요? 가능하다면 몇 개월까지?</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      제3조에서 수습기간 3개월 + "기대수준 미달 시 1회에 한해 2개월 연장 가능" 내용을 정확히 추출합니다.
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "이런 엣지케이스 질문이야말로 AI가 빠르게 답해줄 수 있는 영역입니다. 규정 전문을 뒤질 필요 없이요."
+    </div>
+    <div class="var-toggle" onclick="toggleVar(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      Variation 2개
+    </div>
+    <div class="var-list">
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V1</span><span class="var-label">징계 절차 질의</span></div>
+        <div class="var-prompt" onclick="copyText(this)">우리 회사 징계 절차를 단계별로 정리하고, 직원의 소명권과 재심 청구권이 어떻게 보장되는지 알려줘.</div>
+      </div>
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V2</span><span class="var-label">특별휴가 비교</span></div>
+        <div class="var-prompt" onclick="copyText(this)">특별휴가 종류를 전부 정리하고, 유급/무급 여부와 사용 조건을 표로 만들어줘.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt 3 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-green">PROMPT 3</span>
+      <span class="prompt-card-title">AI 활용 정책 확인</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">우리 회사의 AI 활용 관련 규정을 모두 찾아서 정리해줘. 채용에서의 AI 활용, 직원의 AI 도구 사용, AI 교육 의무 등 AI와 관련된 조항을 전부 모아줘.</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      제4조(AI 채용 스크리닝), 제9장 전체(AI 활용 원칙), 제13조(AI/디지털 전환 교육 의무화) 등 여러 장에 흩어진 AI 관련 조항을 한 곳에 모아줍니다.
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "규정 여기저기에 흩어진 AI 관련 조항을 한 번에 모아볼 수 있습니다. 정책 검토나 감사 대비에도 유용하죠."
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== STEP 3: 교차 분석 ==================== -->
+<div class="section" id="sec-s3">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--red);">3</div>
+    <h2>교차 분석 — NotebookLM의 진짜 힘 ⭐</h2>
+  </div>
+  <p class="session-desc">"여러 문서를 한꺼번에 읽고 연결해서 분석하는 것"이 NotebookLM의 핵심 차별점입니다. 이 단계가 시연의 하이라이트입니다.</p>
+
+  <div class="info-box info-red">
+    <strong>🔥 핵심 포인트</strong> — 인사규정(제도) + 만족도(직원 목소리) + 퇴사자 데이터(팩트)를 교차 분석하여 <strong>한 문서만으로는 보이지 않던 인사이트</strong>를 도출합니다.
+  </div>
+
+  <!-- Prompt 4 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-red">PROMPT 4 ⭐</span>
+      <span class="prompt-card-title">규정 vs 실태 — 승진 제도 Gap 분석</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">인사규정상 승진 제도와 직원 만족도 조사에서 나타난 승진 관련 불만을 비교 분석해줘.
+규정과 현실의 갭(gap)이 어디서 발생하고 있는지 진단해줘.</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      <strong>규정:</strong> 최소 체류기간 + 평가요건 + 발탁승진 제도 있음<br>
+      <strong>실태:</strong> "승진적체" 78회 언급, 점수 2.89점 최하위, "발탁승진 사례를 본 적 없다"는 주관식 응답<br>
+      <strong>→ 진단:</strong> 제도는 있으나 실행되지 않고 있음 (제도-실행 갭)
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "이게 핵심입니다. 규정 문서와 설문 결과를 동시에 분석해서 Gap을 찾아내죠. 사람이 하면 며칠 걸릴 분석을 AI가 몇 초 만에 해냅니다."
+    </div>
+  </div>
+
+  <!-- Prompt 5 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-red">PROMPT 5 ⭐</span>
+      <span class="prompt-card-title">데이터 기반 이직 종합 분석</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">퇴사자 데이터를 분석해서:
+1. 퇴사 사유별 비율을 정리하고
+2. 어떤 부서에서 이직이 가장 심각한지
+3. 핵심인재(A등급 이상) 이탈 현황을 알려줘.
+만족도 조사 결과와 연결해서 해석도 부탁해.</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      <strong>퇴사사유:</strong> 연봉 부족(25%), 감정노동(20%), 승진적체(15%)…<br>
+      <strong>부서:</strong> CS팀 6명 퇴사 → 만족도 최하위(3.15점)와 정확히 일치<br>
+      <strong>핵심인재:</strong> A등급 이상 퇴사자 6명(30%) — 리텐션 실패 심각<br>
+      <strong>연결:</strong> 만족도 보고서의 이직의향 21.4%와 실제 퇴사 패턴 매칭
+    </div>
+    <div class="var-toggle" onclick="toggleVar(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      Variation 2개
+    </div>
+    <div class="var-list">
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V1</span><span class="var-label">조기퇴사 분석</span></div>
+        <div class="var-prompt" onclick="copyText(this)">퇴사자 중 근속 2년 미만인 조기퇴사자만 분석해줘. 공통적인 퇴사 패턴이 있는지, 우리 온보딩/수습 제도의 문제점은 없는지 진단해줘.</div>
+      </div>
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V2</span><span class="var-label">원격근무 연계</span></div>
+        <div class="var-prompt" onclick="copyText(this)">원격근무 규정을 요약하고, 실제 직원들이 원격근무에 대해 어떻게 느끼는지 만족도 데이터와 연결해서 분석해줘.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt 6 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-red">PROMPT 6 ⭐</span>
+      <span class="prompt-card-title">CEO 보고용 — HR 긴급 개선 과제</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">지금까지 분석한 인사규정, 만족도 조사, 퇴사자 데이터를 종합해서
+CEO에게 보고할 "2026년 상반기 HR 긴급 개선 과제 Top 3"를 작성해줘.
+
+각 과제별로:
+- 현황 진단 (데이터 근거 포함)
+- 제도 개선 방향
+- 예상 비용 및 기대 효과
+를 포함해줘.</div>
+    </div>
+    <div class="expected">
+      <span class="expected-label">✨ 기대 결과</span>
+      3개 문서를 종합한 전략 보고서 형태의 답변이 생성됩니다. 승진체계 개편, CS팀 근무환경 개선, 보상 경쟁력 강화 등 데이터 기반 과제가 도출됩니다.
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "이것이 HR 분야에서 NotebookLM을 쓰는 궁극적인 목적입니다. 산재된 자료를 한곳에 모아서 의사결정 자료를 만들어내는 것이죠."
+    </div>
+    <div class="var-toggle" onclick="toggleVar(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      Variation 2개
+    </div>
+    <div class="var-list">
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V1</span><span class="var-label">FAQ 생성</span></div>
+        <div class="var-prompt" onclick="copyText(this)">우리 회사 복리후생 제도를 신입사원이 이해하기 쉽게 FAQ 형태로 만들어줘.</div>
+      </div>
+      <div class="var-item">
+        <div class="var-item-header"><span class="var-badge">V2</span><span class="var-label">온보딩 이메일</span></div>
+        <div class="var-prompt" onclick="copyText(this)">이 모든 자료를 바탕으로, 신규 입사자에게 보낼 "입사 첫날 알아야 할 것들" 이메일 초안을 작성해줘.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== STEP 4: 오디오 ==================== -->
+<div class="section" id="sec-s4">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--purple);">4</div>
+    <h2>오디오 개요 (Audio Overview)</h2>
+  </div>
+  <p class="session-desc">"AI가 팟캐스트처럼 대화형으로 요약해줍니다" — NotebookLM의 독특한 기능인 오디오 개요를 체험합니다.</p>
+
+  <!-- Step 4-1 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-purple">4-1</span>
+      <span class="prompt-card-title">Audio Overview 생성</span>
+    </div>
+    <p class="prompt-desc">화면 상단 또는 우측의 <strong>"Audio Overview"</strong> (또는 "오디오 개요") → <strong>"생성"</strong> 버튼 클릭</p>
+    <div class="prompt-body" style="padding-bottom:0.5rem">
+      <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:1rem">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--purple-light);border:1px solid #E1D5F0;border-radius:8px;font-size:0.84rem;color:#6a1b9a">
+          <span style="font-size:1.1rem">🎧</span>
+          <span>생성 버튼 클릭 후 <strong>2~3분</strong> 대기 — AI 호스트 2명이 대화하는 오디오가 만들어집니다</span>
+        </div>
+      </div>
+    </div>
+    <div class="speaker-note">
+      <span class="speaker-note-label">🎤 시연 멘트</span>
+      "출퇴근길에 이걸 듣고 회의 전에 빠르게 자료를 복습하는 용도로 쓸 수 있습니다. 긴 보고서를 읽을 시간이 없을 때 특히 유용하죠."
+    </div>
+  </div>
+
+  <!-- Step 4-2 -->
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-purple">4-2</span>
+      <span class="prompt-card-title">(선택) 커스텀 오디오 — 특정 주제에 초점</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <p class="prompt-desc">오디오 생성 시 커스터마이즈 옵션이 있다면, 아래 지시를 입력해 특정 주제에 집중시킬 수 있습니다.</p>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">CS팀의 이직률 문제와 감정노동 이슈에 초점을 맞춰서 요약해줘</div>
+    </div>
+    <div class="info-box info-purple" style="margin:0 1.25rem 1.25rem;">
+      <strong>💡 팁</strong> — 한국어 오디오도 가능하지만, 영어 오디오가 가장 자연스럽습니다. 시연 시 영어로 먼저 들려주고 한국어 버전도 보여주면 효과적입니다.
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== STEP 5: 실무 적용 ==================== -->
+<div class="section" id="sec-s5">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--yellow);">5</div>
+    <h2>실무 적용 토론</h2>
+  </div>
+  <p class="session-desc">시연을 마무리하며, 참석자들이 실제 업무에서 어떻게 활용할 수 있을지 토론합니다.</p>
+
+  <div class="info-box info-green">
+    <strong>🗣️ 참석자에게 던질 질문</strong><br><br>
+    <strong>1.</strong> "지금 우리 회사 인사규정, 몇 페이지인가요? 직원들이 다 읽어봤을까요?"<br>
+    → NotebookLM에 올리면 챗봇처럼 질의응답 가능<br><br>
+    <strong>2.</strong> "만족도 조사 결과, 분석 보고서 만드는 데 얼마나 걸리나요?"<br>
+    → 원시 데이터 + 설문지 올리면 초안 자동 생성<br><br>
+    <strong>3.</strong> "면접관 교육 자료, 온보딩 매뉴얼도 올리면?"<br>
+    → 신규 입사자용 FAQ 챗봇 즉석 생성 가능
+  </div>
+
+  <div class="section-divider">추가 활용 시나리오</div>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="icon">⚖️</div>
+      <h4>법규 준수 체크</h4>
+      <p>취업규칙 + 노동관계법령<br>→ 규정 위반 사항 자동 점검</p>
+    </div>
+    <div class="concept-card">
+      <div class="icon">🎓</div>
+      <h4>교육 이수 분석</h4>
+      <p>연간 교육계획 + 이수 현황<br>→ 미이수자 추출 및 리마인더</p>
+    </div>
+    <div class="concept-card">
+      <div class="icon">📉</div>
+      <h4>연도별 트렌드 분석</h4>
+      <p>이전 연도 보고서 복수 업로드<br>→ 다년간 추세 자동 분석</p>
+    </div>
+  </div>
+
+  <div class="section-divider">보너스 프롬프트</div>
+
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-yellow">BONUS 1</span>
+      <span class="prompt-card-title">AI 정책 진단 및 보완 제안</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">인사규정의 AI 활용 조항(제9장)을 분석하고, 현재 규정이 최신 AI 기술 동향을 충분히 반영하고 있는지 평가해줘. 부족한 점이 있다면 보완 조항을 제안해줘.</div>
+    </div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-yellow">BONUS 2</span>
+      <span class="prompt-card-title">MZ세대 vs 40대+ 만족도 격차 분석</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">만족도 보고서에서 MZ세대(20~30대)와 40대 이상 간 만족도 격차가 언급되어 있어. 이 격차의 원인을 인사규정의 어떤 제도적 요인과 연결할 수 있는지 분석하고, 세대별 맞춤 HR 전략을 제안해줘.</div>
+    </div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-card-header">
+      <span class="prompt-step step-yellow">BONUS 3</span>
+      <span class="prompt-card-title">CS팀 긴급 처방전</span>
+      <button class="copy-btn" title="복사" onclick="copyFromCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-text" onclick="copyText(this)">CS팀은 만족도 최하위(3.15점)이고 퇴사자도 6명으로 가장 많아. 인사규정의 복리후생 조항, 만족도 조사의 CS팀 데이터, 퇴사자 현황을 모두 종합해서 "CS팀 긴급 리텐션 플랜"을 만들어줘. 즉시 시행(1개월 내), 단기(3개월), 중기(6개월) 로드맵으로.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== DOWNLOAD ==================== -->
+<div class="section" id="sec-download">
+  <div class="session-header">
+    <div class="session-num" style="background: var(--gray-700);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </div>
+    <h2>실습 파일 다운로드</h2>
+  </div>
+
+  <div class="dl-card">
+    <h3>NotebookLM 업로드용 샘플 파일 (3종)</h3>
+    <p>가상 기업 "(주)테크노바 코리아"의 HR 데이터입니다. 3개 파일 모두 다운로드 후 NotebookLM에 업로드하세요.</p>
+    <div class="dl-grid">
+      <div class="dl-item">
+        <div class="dl-icon word">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="dl-item-info">
+          <h4>01_인사규정_테크노바코리아.docx</h4>
+          <span>9장 17조 인사규정 (채용~AI윤리)</span>
+        </div>
+      </div>
+      <div class="dl-item">
+        <div class="dl-icon word">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="dl-item-info">
+          <h4>02_직원만족도조사_2025하반기.docx</h4>
+          <span>영역별 만족도 + eNPS + 이직의향 + 개선과제</span>
+        </div>
+      </div>
+      <div class="dl-item">
+        <div class="dl-icon csv">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="dl-item-info">
+          <h4>03_퇴사자현황_2025.csv</h4>
+          <span>2025년 퇴사자 20명 상세 데이터</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box info-blue">
+    <strong>📋 파일 구조 안내</strong><br><br>
+    <strong>인사규정</strong> — 총칙, 채용, 근무, 휴가, 평가/보상, 교육훈련, 퇴직/해고, 복리후생, AI활용윤리 (9장). 채용 절차 표, 특별휴가 표, 승진 요건 표 포함<br><br>
+    <strong>만족도 보고서</strong> — 9개 영역별 점수(4.21~2.89), 6개 부서별 점수, eNPS(-2.1), 이직의향(21.4%), 주관식 키워드 분석, 개선과제 5건<br><br>
+    <strong>퇴사자 데이터</strong> — 부서, 직급, 입퇴사일, 퇴사사유, 근속년수, 연봉, 성과등급, 이직후 회사, 비고 (20명)
+  </div>
+
+  <div class="section-divider">주의사항</div>
+
+  <div class="info-box info-yellow">
+    <strong>⚠️ 시연 시 반드시 확인하세요</strong><br><br>
+    <strong>1. 실제 데이터 금지</strong> — 실제 회사 데이터를 NotebookLM에 업로드하지 마세요 (Google 서버에 저장됨)<br>
+    <strong>2. 인터넷 필수</strong> — NotebookLM은 온라인 서비스이므로 안정적인 네트워크 필요<br>
+    <strong>3. 응답 시간</strong> — 복잡한 교차 분석은 10~30초 걸릴 수 있음<br>
+    <strong>4. 환각 가능성</strong> — AI 생성 내용은 반드시 원문과 대조 확인 (출처 클릭으로 검증)<br>
+    <strong>5. 오디오 언어</strong> — 한국어 오디오 가능하나, 영어가 더 자연스러움
+  </div>
+
+</div>
+
+</div><!-- main -->
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  복사되었습니다
+</div>
+
+<!-- ===== FONT SIZE ===== -->
+<div class="font-ctrl">
+  <button onclick="changeFontSize(-1)" title="글자 작게">A-</button>
+  <button onclick="changeFontSize(1)" title="글자 크게">A+</button>
+</div>
+
+<script>
+// Tab navigation
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    const sec = document.getElementById('sec-' + btn.dataset.tab);
+    if (sec) sec.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+// Toggle variations
+function toggleVar(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+// Copy prompt text
+function copyText(el) {
+  const text = el.textContent.trim();
+  navigator.clipboard.writeText(text).then(() => showToast()).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast();
+  });
+}
+
+// Copy from button
+function copyFromCard(btn) {
+  const card = btn.closest('.prompt-card');
+  const textEl = card.querySelector('.prompt-text');
+  if (textEl) {
+    const text = textEl.textContent.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.classList.add('copied');
+      showToast();
+      setTimeout(() => btn.classList.remove('copied'), 1500);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.classList.add('copied');
+      showToast();
+      setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+  }
+}
+
+// Toast
+let toastTimer;
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// Font size
+let fontSize = 16;
+function changeFontSize(delta) {
+  fontSize = Math.max(12, Math.min(22, fontSize + delta));
+  document.body.style.fontSize = fontSize + 'px';
+}
+</script>
+</body>
+</html>
